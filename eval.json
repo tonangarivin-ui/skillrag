@@ -1,0 +1,14 @@
+[
+  { "q": "How do I run a long job inside the instabox cloud sandbox without blocking my terminal?", "expect": "instabox-sandbox" },
+  { "q": "What are the video duration and resolution limits for submitting to Adobe Stock?", "expect": "microstock-submission" },
+  { "q": "Why does a systemd unit using tsx as ExecStart keep restarting, and how do I fix it?", "expect": "linux-server-admin" },
+  { "q": "How do I expose a local web service publicly without opening any inbound ports?", "expect": "cloudflare-tunnel-hosting" },
+  { "q": "How do I publish a post to Threads through the Buffer GraphQL API?", "expect": "buffer-api" },
+  { "q": "How do I create and manage Meta ads campaigns from the command line?", "expect": "meta-ads" },
+  { "q": "How should I render a Remotion video programmatically?", "expect": "remotion-video" },
+  { "q": "How do I search and edit notes in the Obsidian vault?", "expect": "obsidian" },
+  { "q": "How do I create or query Notion pages using the ntn CLI?", "expect": "notion" },
+  { "q": "What makes a good Suno prompt for generating a song from lyrics?", "expect": "songwriting" },
+  { "q": "How do I post a tweet and upload media using xurl?", "expect": "xurl" },
+  { "q": "How do I query Polymarket market prices and order books?", "expect": "polymarket" }
+]
