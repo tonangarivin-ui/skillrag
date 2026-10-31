@@ -52,7 +52,17 @@ docker exec n8n n8n update:workflow --id=<id> --active=true
 docker restart n8n
 ```
 
-Verified end to end: `POST /webhook/skillrag {"question": "..."}` returns the answer and its sources, HTTP 200.
+Verified end to end: `POST http://127.0.0.1:5678/webhook/skillrag {"question": "..."}` returns the answer and its sources, HTTP 200.
+
+Live instances:
+
+| service | URL | access |
+|---|---|---|
+| skillrag API | `https://rag.darklabs.tech` | `POST /ask` needs `x-api-key` (the proxy sets `X-Forwarded-For`, direct loopback calls do not, so n8n needs no token) |
+| n8n editor | `https://flow.darklabs.tech` | the existing n8n account |
+| n8n webhook | `https://flow.darklabs.tech/webhook/...` | **blocked at nginx (403)** — a public webhook would proxy straight to the LLM |
+
+The API token lives in `.token` (gitignored, mode 600) or `SKILLRAG_TOKEN`; requests through the proxy without it get `401`.
 
 ## Commands
 

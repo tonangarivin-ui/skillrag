@@ -246,6 +246,15 @@ def answer(question: str, k: int = 6) -> dict:
     }
 
 
+def api_token() -> str:
+    """Bearer token for requests that arrive through the public reverse proxy."""
+    tok = os.environ.get("SKILLRAG_TOKEN")
+    if tok:
+        return tok
+    f = HERE / ".token"
+    return f.read_text().strip() if f.exists() else ""
+
+
 def cmd_serve(port: int) -> None:
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -265,6 +274,13 @@ def cmd_serve(port: int) -> None:
             if self.path.rstrip("/") not in ("/ask", ""):
                 self._send(404, {"error": "not found"})
                 return
+            # Requests through nginx carry X-Forwarded-For; direct calls from n8n on
+            # loopback do not. Public callers must present the token.
+            if self.headers.get("x-forwarded-for"):
+                sent = self.headers.get("x-api-key") or (self.headers.get("authorization") or "").removeprefix("Bearer ").strip()
+                if sent != api_token():
+                    self._send(401, {"error": "x-api-key required"})
+                    return
             try:
                 length = int(self.headers.get("content-length") or 0)
                 payload = json.loads(self.rfile.read(length) or b"{}")

@@ -2,3 +2,4 @@ chunks.json
 vectors.json
 __pycache__/
 bm25.json
+.token
