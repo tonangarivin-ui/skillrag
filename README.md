@@ -32,6 +32,28 @@ question ───────────────────────�
 
 Shipping the lexical retriever that works beats shipping a vector index that half-exists. When the quota allows a full run, the two retrievers will be compared on the same 12 questions.
 
+## HTTP endpoint + n8n workflow
+
+The retriever is also a service, so automation can call it (`skillrag.service`, `127.0.0.1:3310`):
+
+```bash
+curl -s -X POST http://127.0.0.1:3310/ask \
+  -H 'content-type: application/json' \
+  -d '{"question":"What are the Adobe Stock video duration limits?"}'
+# {"answer":"5 to 60 seconds [2]...","sources":[{"path":"creative/microstock-submission/references/adobe-stock.md",...}]}
+```
+
+`n8n-workflow.json` is the same thing as a workflow: **Webhook POST /webhook/skillrag → HTTP Request to skillrag → Respond**. Import on an existing n8n instance with:
+
+```bash
+docker cp n8n-workflow.json n8n:/tmp/wf.json
+docker exec n8n n8n import:workflow --input=/tmp/wf.json
+docker exec n8n n8n update:workflow --id=<id> --active=true
+docker restart n8n
+```
+
+Verified end to end: `POST /webhook/skillrag {"question": "..."}` returns the answer and its sources, HTTP 200.
+
 ## Commands
 
 ```bash
@@ -42,6 +64,8 @@ python3 rag.py index --vectors                         # also embed (needs embed
 ```
 
 `chunks.json`, `bm25.json` and `vectors*.json*` are build artifacts and are not committed.
+
+Retrieval is wording-sensitive: the question *"why does a systemd unit using tsx keep restarting"* retrieves three plausible systemd documents but not the one that explains it, while *"why does a systemd unit using ExecStart with tsx restart loop"* does. That is a vocabulary-gap miss, and it is the case for a reranker or query expansion — not something the current scorer can fix.
 
 ## What this does not do
 

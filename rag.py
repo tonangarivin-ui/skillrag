@@ -222,6 +222,67 @@ def cmd_ask(question: str) -> None:
         print(f"  {score}  {c['path']} — {c['heading']}")
 
 
+def answer(question: str, k: int = 6) -> dict:
+    """Retrieval + one LLM call. Shared by the CLI and the HTTP endpoint."""
+    hits = search(question, k=k)
+    if not hits:
+        return {"answer": "", "sources": [], "note": "no chunk matched"}
+    context = "\n\n".join(f"[{i + 1}] {c['path']} — {c['heading']}\n{c['text']}" for i, (_, c) in enumerate(hits))
+    res = post(
+        "/chat/completions",
+        {
+            "model": CHAT_MODEL,
+            "messages": [
+                {"role": "system", "content": "Answer only from the numbered excerpts. Cite as [n]. If the excerpts do not answer it, say so plainly."},
+                {"role": "user", "content": f"Question: {question}\n\n{context}"},
+            ],
+            "temperature": 0.2,
+            "stream": False,
+        },
+    )
+    return {
+        "answer": res["choices"][0]["message"]["content"].strip(),
+        "sources": [{"path": c["path"], "heading": c["heading"], "score": score} for score, c in hits],
+    }
+
+
+def cmd_serve(port: int) -> None:
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    class Handler(BaseHTTPRequestHandler):
+        def _send(self, code: int, payload: dict) -> None:
+            body = json.dumps(payload).encode()
+            self.send_response(code)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self) -> None:  # health check for supervisors and n8n
+            self._send(200, {"ok": True, "chunks": len(json.loads(CHUNKS.read_text())) if CHUNKS.exists() else 0})
+
+        def do_POST(self) -> None:
+            if self.path.rstrip("/") not in ("/ask", ""):
+                self._send(404, {"error": "not found"})
+                return
+            try:
+                length = int(self.headers.get("content-length") or 0)
+                payload = json.loads(self.rfile.read(length) or b"{}")
+                question = str(payload.get("question") or "").strip()
+                if not question:
+                    self._send(400, {"error": "question required"})
+                    return
+                self._send(200, answer(question))
+            except Exception as e:  # report, do not crash the service
+                self._send(500, {"error": str(e)[:300]})
+
+        def log_message(self, fmt: str, *args) -> None:
+            print(f"[skillrag] {fmt % args}", file=sys.stderr)
+
+    print(f"skillrag listening on 127.0.0.1:{port}", file=sys.stderr)
+    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+
+
 def cmd_eval() -> None:
     cases = json.loads((HERE / "eval.json").read_text())
     index = json.loads(BM25.read_text())
@@ -246,6 +307,8 @@ if __name__ == "__main__":
         cmd_index("--vectors" in sys.argv)
     elif cmd == "ask" and len(sys.argv) > 2:
         cmd_ask(" ".join(sys.argv[2:]))
+    elif cmd == "serve":
+        cmd_serve(int(os.environ.get("SKILLRAG_PORT", "3310")))
     elif cmd == "eval":
         cmd_eval()
     else:

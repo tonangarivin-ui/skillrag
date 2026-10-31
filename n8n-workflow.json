@@ -1,0 +1,52 @@
+{
+  "name": "skillrag — ask my skill docs",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "skillrag",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b1a1f0aa-1111-4a11-9a11-aaaaaaaaaaa1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-40, 300],
+      "webhookId": "skillrag-hook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:3310/ask",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ question: $json.body.question }) }}",
+        "options": { "timeout": 120000, "response": { "response": { "neverError": true } } }
+      },
+      "id": "b1a1f0aa-2222-4a22-9a22-aaaaaaaaaaa2",
+      "name": "skillrag",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ answer: $json.answer, sources: $json.sources }) }}",
+        "options": {}
+      },
+      "id": "b1a1f0aa-3333-4a33-9a33-aaaaaaaaaaa3",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [440, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "skillrag", "type": "main", "index": 0 }]] },
+    "skillrag": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}
